@@ -4,6 +4,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { Pool } = require('pg');
 const { GoogleGenAI } = require('@google/genai');
+const qrImage = require('qr-image');
 
 const app = express();
 app.use(express.json());
@@ -25,11 +26,32 @@ const client = new Client({
   }
 });
 
-// Mostra o QR Code no terminal do Render para você logar o WhatsApp
+
+let ultimoQR = null;
+
 client.on('qr', (qr) => {
-  console.log('ESCANEIE O QR CODE ABAIXO NO SEU WHATSAPP:');
-  qrcode.generate(qr, { small: true });
+  console.log('Novo QR Code gerado! Acesse a URL do seu app /qrcode para escanear.');
+  ultimoQR = qr; // Salva o texto do QR Code na memória
 });
+
+// Rota para acessar pelo navegador e escanear com o celular
+app.get('/qrcode', (req, res) => {
+  if (!ultimoQR) {
+    return res.send('O WhatsApp já está conectado ou o QR Code ainda não foi gerado.');
+  }
+  
+  // Transforma o texto do QR Code em uma imagem PNG real
+  const code = qrImage.image(ultimoQR, { type: 'png' });
+  res.type('png');
+  code.pipe(res);
+});
+
+
+// Mostra o QR Code no terminal do Render para você logar o WhatsApp
+// client.on('qr', (qr) => {
+//   console.log('ESCANEIE O QR CODE ABAIXO NO SEU WHATSAPP:');
+//   qrcode.generate(qr, { small: true });
+// });
 
 client.on('ready', () => {
   console.log('NeoDB está online e conectado ao WhatsApp!');
